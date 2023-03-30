@@ -1,0 +1,2 @@
+// Warto na początku czyścić ul, by się na froncie nie nadpisywało ---> o co chodzi (script js, funkcja showAllTasks)
+Folder .idea
