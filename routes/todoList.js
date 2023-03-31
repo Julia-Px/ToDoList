@@ -1,21 +1,23 @@
+/** Importowanie modułu express i kontrolerów */
 const express = require('express');
-
 const { getTodoList, getOneTask, addTask, updateDoneTask, updateTask, deleteTask } = require('../controllers/todoList');
 
+/** Tworzenie routera */
 const todolistRouter = express.Router();
 
+/** Definiowanie ścieżek dla routera */
 todolistRouter
-  // wyświetlamy wszystkie taski
+
   .get('/', getTodoList)
-  // zwracamy pojedynczy task
+
   .get('/:id', getOneTask)
-  // tworzymy nowy task
+
   .post('/', addTask)
-  // aktualizujemy task: wykonany
+
   .patch('/done/:id', updateDoneTask)
-  // aktualizujemy cały task
+
   .put('/:id', updateTask)
-  // usuwamy task
+
   .delete('/:id', deleteTask);
 
 module.exports = {

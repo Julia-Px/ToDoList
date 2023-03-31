@@ -1,6 +1,11 @@
 /**
- * Dodajemy nasłuchiwacz zdarzeń, który będzie wywoływać funkcję main
- * po załadowaniu całego dokumentu.
+ * Wprowadzone zmiany:
+ * 1. Dodanie funkcji enterKeyCheckPopup, która sprawdza czy wciśnięto klawisz Enter w polu input popupInput.
+ * 2. Dodanie nasłuchiwacza zdarzeń dla popupInput.
+ * 3. Zrefaktoryzowano funkcje komunikujące się z API, wprowadzając funkcję fetchAPI() do obsługi zapytań.
+ * 4. Dodanie funkcji handleListClick, która obsługuje kliknięcia na przyciskach "zakończ", "edytuj" i "usuń".
+ * 5. Dodanie funkcji toggleTaskCompletion, która przełącza status wykonania zadania.
+ * 6. Dodanie funkcji deleteTaskAndRender, która usuwa zadanie z listy zadań i renderuje listę na stronie.
  */
 
 /**
@@ -24,92 +29,74 @@ const prepareDOMElements = () => {
  */
 const prepareDOMEvents = () => {
   addBtn.addEventListener('click', addNewTask);
-  ulList.addEventListener('click', checkClick);
+  ulList.addEventListener('click', handleListClick);
   popupCloseBtn.addEventListener('click', closeEdit);
   popupAddBtn.addEventListener('click', changeTodoText);
   todoInput.addEventListener('keyup', enterKeyCheck);
+  popupInput.addEventListener('keyup', enterKeyCheckPopup); // Dodajemy nasłuchiwacz zdarzeń dla popupInput
+};
+
+/**
+ *  Główna funkcja obsługująca zapytania do API.
+ */
+const fetchAPI = async (url, method = 'GET', body = null, headers = {}) => {
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const res = await fetch(url, options);
+  const data = await res.json();
+  return data;
 };
 
 /**
  * Pobiera listę zadań z serwera.
  */
 const getTodoList = async () => {
-  const res = await fetch('/todolist', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  const data = await res.json();
-  return data;
+  return await fetchAPI('/todolist');
 };
 
 /**
  * Pobiera pojedyncze zadanie z serwera na podstawie jego identyfikatora.
  */
 const getOneTask = async (id) => {
-  const res = await fetch(`/todolist/${id}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  const data = await res.json();
-  return data;
+  return await fetchAPI(`/todolist/${id}`);
 };
 
 /**
  * Dodaje nowe zadanie na serwerze.
  */
 const addTask = async (newTask) => {
-  const res = await fetch(`/todolist`, {
-    method: 'POST',
-    body: JSON.stringify(newTask),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  const data = await res.json();
-  return data;
+  return await fetchAPI('/todolist', 'POST', newTask);
 };
 
 /**
  * Usuwa zadanie z serwera na podstawie jego identyfikatora.
  */
 const deleteTask = async (id) => {
-  const res = await fetch(`/todolist/${id}`, {
-    method: 'DELETE',
-  });
+  await fetchAPI(`/todolist/${id}`, 'DELETE');
 };
 
 /**
  * Aktualizuje status wykonania zadania na serwerze.
  */
-const updateDoneTask = async (id, ToDos) => {
-  const res = await fetch(`/todolist/done/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(ToDos),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  const data = await res.json();
-  return data;
+const updateDoneTask = async (id, doneTask) => {
+  return await fetchAPI(`/todolist/done/${id}`, 'PATCH', doneTask);
 };
 
-/**
+/**s
  * Aktualizuje tytuł zadania na serwerze.
  */
 const updateTask = async (id, updatedTask) => {
-  const res = await fetch(`/todolist/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(updatedTask),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  const data = await res.json();
-  return data;
+  return await fetchAPI(`/todolist/${id}`, 'PUT', updatedTask);
 };
 /**
  * Renderuje listę zadań na stronie.
@@ -159,7 +146,7 @@ const addNewTask = async () => {
       title: todoInput.value,
       isDone: false,
     };
-    const addedTask = await addTask(newTask);
+    await addTask(newTask);
     await renderTodoList();
     todoInput.value = '';
     errorInfo.textContent = '';
@@ -171,21 +158,35 @@ const addNewTask = async () => {
 /**
  * Obsługuje kliknięcia na przyciskach "zakończ", "edytuj" i "usuń".
  */
-const checkClick = async (e) => {
+const handleListClick = async (e) => {
   if (e.target.matches('.complete')) {
-    const li = e.target.closest('li');
-    li.classList.toggle('completed');
-    e.target.classList.toggle('completed');
-    const taskId = li.dataset.id;
-    await updateDoneTask(taskId, { isDone: li.classList.contains('completed') });
+    await toggleTaskCompletion(e);
   } else if (e.target.matches('.edit')) {
     editTodo(e);
   } else if (e.target.matches('.delete')) {
-    const li = e.target.closest('li');
-    const taskId = li.dataset.id;
-    await deleteTask(taskId);
-    li.remove();
+    await deleteTaskAndRender(e);
   }
+};
+
+/**
+ * Przełącza status wykonania zadania.
+ */
+const toggleTaskCompletion = async (e) => {
+  const li = e.target.closest('li');
+  li.classList.toggle('completed');
+  e.target.classList.toggle('completed');
+  const taskId = li.dataset.id;
+  await updateDoneTask(taskId, { isDone: li.classList.contains('completed') });
+};
+
+/**
+ * Usuwa zadanie z listy zadań i z serwera.
+ */
+const deleteTaskAndRender = async (e) => {
+  const li = e.target.closest('li');
+  const taskId = li.dataset.id;
+  await deleteTask(taskId);
+  li.remove();
 };
 
 /**
@@ -228,8 +229,17 @@ const enterKeyCheck = (e) => {
     addNewTask();
   }
 };
-/**
 
+/**
+ * Sprawdza, czy wciskanie klawisza Enter aktualizuje zadanie w okienku popup.
+ */
+const enterKeyCheckPopup = (e) => {
+  if (e.key === 'Enter') {
+    changeTodoText();
+  }
+};
+
+/**
  Główna funkcja inicjalizująca aplikację, uruchamiająca funkcje
  przygotowujące elementy DOM i zdarzenia oraz renderująca listę zadań.
  */
@@ -239,4 +249,8 @@ const main = () => {
   renderTodoList();
 };
 
+/**
+ * Dodajemy nasłuchiwacz zdarzeń, który będzie wywoływać funkcję main
+ * po załadowaniu całego dokumentu.
+ */
 document.addEventListener('DOMContentLoaded', main);
