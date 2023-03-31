@@ -1,23 +1,21 @@
-let todoInput;
-/* można zapisać tak: let todoInput, errorInfo, ... */
 let errorInfo;
 let addBtn;
 let ulList;
-let newTask; // nowo dodane Li, nowe zadanie
-let popup; // popup
-let popupInfo; // tekst w popupie, jak się doda pusty tekst
-let todoToEdit; // edytowany Todu
-let popupInput; // input w popupie
-let popupAddBtn; //przycisk "zatwierdź" w popupie
-let popupCloseBtn; // przycisk "anuluj" w popupie
+let newTask;
+let popup;
+let popupInfo;
+let todoToEdit;
+let popupInput;
+let popupAddBtn;
+let popupCloseBtn;
 
 const main = () => {
   prepareDOMElements();
   prepareDOMEvents();
+  renderTodoList();
 };
 
-const prepareDOMElements = (params) => {
-  // pobieramy wszystkie nasze elementy
+const prepareDOMElements = () => {
   todoInput = document.querySelector('.todo-input');
   errorInfo = document.querySelector('.error-info');
   addBtn = document.querySelector('.btn-add');
@@ -31,7 +29,6 @@ const prepareDOMElements = (params) => {
 };
 
 const prepareDOMEvents = () => {
-  // nadajemy nasłuchiwanie
   addBtn.addEventListener('click', addNewTask);
   ulList.addEventListener('click', checkClick);
   popupCloseBtn.addEventListener('click', closeEdit);
@@ -39,22 +36,7 @@ const prepareDOMEvents = () => {
   todoInput.addEventListener('keyup', enterKeyCheck);
 };
 
-/**
- * Musimy stworzyć taką samą pojedynczą strukturę html, ale w JS
- * <li data-id='test1'>Zadanie 1
- *                     <div class="tools">
- *                         <button class="complete"><i class="fas fa-check"></i></button>
- *                         <button class="edit">EDIT</button>
- *                         <button class="delete"><i class="fas fa-times"></i></button>
- *                     </div>
- *  </li>
- *
- *  Możemy to wykonać na 2 sposoby, z czego jeden jest bezpieczniejszy, ale trudniejszy, wiec z skorzystamy z niego:
- */
-
 const getTodoList = async () => {
-  //działa w konsoli
-  // jak połączyć to tak żeby na stornie, po wejściu na nią, wyświetliła mi się moja todo lista (to co mama w pliku json)??
   const res = await fetch('/todolist', {
     method: 'GET',
     headers: {
@@ -62,7 +44,7 @@ const getTodoList = async () => {
     },
   });
   const data = await res.json();
-  ToDos = data;
+  return data;
 };
 
 const getOneTask = async (id) => {
@@ -73,7 +55,7 @@ const getOneTask = async (id) => {
     },
   });
   const data = await res.json();
-  ToDos = data; // czemu tutaj ToDo?
+  return data;
 };
 
 const addTask = async (newTask) => {
@@ -84,6 +66,8 @@ const addTask = async (newTask) => {
       'Content-Type': 'application/json',
     },
   });
+  const data = await res.json();
+  return data;
 };
 
 const deleteTask = async (id) => {
@@ -101,103 +85,91 @@ const updateDoneTask = async (id, ToDos) => {
     },
   });
   const data = await res.json();
-  ToDos = data;
+  return data;
+};
+
+const updateTask = async (id, updatedTask) => {
+  const res = await fetch(`/todolist/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updatedTask),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  const data = await res.json();
+  return data;
 };
 
 const renderTodoList = async () => {
   const ToDos = await getTodoList();
-  // Pobieramy ul, bo tam będziemy wrzucać nasze taski: To jak widzę jest robione
   const ul = document.querySelector('#ulList');
-  // Warto na początku czyścić ul, by się na froncie nie nadpisywało
   ul.textContent = '';
-  // Następnie tworzymy pętle: Zrobione
+
   for (const task of ToDos) {
-    // Tworzymy li: Tutaj nazwałbym to po prostu li:
     const li = document.createElement('li');
-    // Tworzymy diva
     const div = document.createElement('div');
-    // Tworzymy button, a nawet dla uproszczenia od razu 3. Dałby się to krócej, ale już nie popadajmy w skrajność:)
     const btnComplete = document.createElement('button');
     const btnEdit = document.createElement('button');
     const btnDelete = document.createElement('button');
-    // Nadajemy odpowiednie klasy i wartości
+
     li.dataset.id = task.id;
     li.textContent = task.title;
     div.classList.add('tools');
     btnComplete.classList.add('complete');
     btnComplete.innerHTML = '<i class="fas fa-check"></i>';
+
+    // Dodajemy warunek, który sprawdza, czy zadanie jest wykonane
+    if (task.isDone) {
+      li.classList.add('completed');
+      btnComplete.classList.add('completed');
+    }
     btnEdit.classList.add('edit');
     btnEdit.textContent = 'EDIT';
     btnDelete.classList.add('delete');
     btnDelete.innerHTML = '<i class="fas fa-times"></i>';
 
-    // Teraz musimy wszystko ładnie poukładać:
     div.append(btnComplete);
     div.append(btnEdit);
     div.append(btnDelete);
     li.append(div);
     ul.append(li);
-
-    /**
-     * I już mamy ładną funkcję renderującą wszystkie taski na podstawie tablicy :) Można ją nazwać renderTodoList, by było wiadomo o co chodzi:) dodatkowo powinna  przyjmować jako argument tablicę z todolistą. Będziemy jej używać za każdym razem przy jakichkolwiek zmianach.
-     */
   }
 };
-
-/**
- * Mając już ładną funkcję renderującą todolistę możemy skupić się na dodawaniu nowego tasku
- */
-function addNewTask(newTask) {
+const addNewTask = async () => {
   if (todoInput.value !== '') {
-    // Tworzymy nowego taska
-    // Tutaj póki co na sztywno dodajemy ID, potem będzie generowany z backendu
     const newTask = {
-      id: 123123,
       title: todoInput.value,
-      idDone: false,
+      isDone: false,
     };
-
-    // I wrzucamy go do ToDos
-    ToDos.push(newTask);
-
-    // Na koniec renderujemy zaaktualizowaną listę
-    renderTodoList(ToDos);
+    const addedTask = await addTask(newTask);
+    await renderTodoList();
     todoInput.value = '';
     errorInfo.textContent = '';
   } else {
     errorInfo.textContent = 'Wpisz treść zadania!';
   }
-}
+};
 
-/**
- * Póki co kod nie działa idealnie, ponieważ żeby było szybciej to resztę rzeczy trzeba najpierw zaimplementować na backendzie.
- * Potem wrócimy do frontu, by zmienić funkcje edit i delete.
- * W przypadku funkcji AddNew (warto dla czytelności nazwać ją chociaż AddNewTask), jak już backend będzie działać dobrze, będziemy musieli użyć fetcha do przesłania danych do backendu. Wtedy wszystko będzie działać sprawnie :)
- *
- */
-
-const checkClick = (e) => {
+const checkClick = async (e) => {
   if (e.target.matches('.complete')) {
-    e.target
-      .closest('li')
-      .classList.toggle('completed'); /* tutaj dodajemy sobie klasę completed na dziadku naszego przycisku button */
-    e.target.classList.toggle(
-      'completed',
-    ); /* tutaj dodajemy sobie klasę completed na naszym ptaszku. Używając e.target odnosimy się do elementu który klikamy */
+    const li = e.target.closest('li');
+    li.classList.toggle('completed');
+    e.target.classList.toggle('completed');
+    const taskId = li.dataset.id;
+    await updateDoneTask(taskId, { isDone: li.classList.contains('completed') });
   } else if (e.target.matches('.edit')) {
-    /* wywoływanie popupa */
     editTodo(e);
-    /* 2) W nawiasie wpisujemy e. W ten sposób przekazujemy do funkcji nasz paremetr e z funkcji clickCheck */
   } else if (e.target.matches('.delete')) {
-    deleteTodo(e);
+    const li = e.target.closest('li');
+    const taskId = li.dataset.id;
+    await deleteTask(taskId);
+    li.remove();
   }
 };
 
 const editTodo = (e) => {
   todoToEdit = e.target.closest('li');
-  /* e.target -> element w który będziemy klikali. Dlatego dalej wskazujemy na najbliższe li. Dosłownie - tam gdzie klikniemy to weź najbliższe li */
-  popupInput.value = todoToEdit.firstChild.textContent; /* FirstChild to tekst naszego li (todoToEdit) */
-  console.log(todoToEdit.firstChid);
+  popupInput.value = todoToEdit.firstChild.textContent;
   popup.style.display = 'flex';
 };
 
@@ -206,24 +178,16 @@ const closeEdit = () => {
   popupInfo.textContent = '';
 };
 
-const changeTodoText = () => {
+const changeTodoText = async () => {
   if (popupInput.value !== '') {
-    todoToEdit.firstChild.textContent = popupInput.value;
+    const taskId = todoToEdit.dataset.id;
+    const updatedTask = await updateTask(taskId, { title: popupInput.value });
+    console.log(updatedTask);
+    todoToEdit.firstChild.textContent = await updatedTask.title;
     popup.style.display = 'none';
-    popupInfo.textContent = ''; /* Musimy to dodać też tutaj żeby się nie pokazywało 'Musisz podać jakąś treść!'*/
+    popupInfo.textContent = '';
   } else {
     popupInfo.textContent = 'Musisz podać jakąś treść!';
-  }
-};
-
-const deleteTodo = (e) => {
-  e.target.closest('li').remove();
-  const allTodos =
-    ulList.querySelectorAll(
-      'li',
-    ); /* Pobieramy sobie wszystkie nasze Todosy. Ważne jest żeby to było pod  e.target.closest('li').remove()*/
-  if (allTodos.length === 0) {
-    errorInfo.textContent = 'Brak zadań na liście';
   }
 };
 
@@ -234,14 +198,3 @@ const enterKeyCheck = (e) => {
 };
 
 document.addEventListener('DOMContentLoaded', main);
-/* Jest to event który sprawie że mamy
-takie zabezpieczenie że nasze skrypty nie uruchomią się dopóki
-cała strona nie zostanie wczytana (jak dokument zostanie załadowany to odpal funkcję main)
- */
-
-renderTodoList();
-// renderTodoList(ToDos);
-// getOneTask(id);
-// addTask(newTask);
-// deleteTask(id);
-// updateDoneTask(id, ToDos);
