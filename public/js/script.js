@@ -1,20 +1,11 @@
-let errorInfo;
-let addBtn;
-let ulList;
-let newTask;
-let popup;
-let popupInfo;
-let todoToEdit;
-let popupInput;
-let popupAddBtn;
-let popupCloseBtn;
+/**
+ * Dodajemy nasłuchiwacz zdarzeń, który będzie wywoływać funkcję main
+ * po załadowaniu całego dokumentu.
+ */
 
-const main = () => {
-  prepareDOMElements();
-  prepareDOMEvents();
-  renderTodoList();
-};
-
+/**
+ * Pobiera referencje do elementów DOM i przypisuje je do zmiennych.
+ */
 const prepareDOMElements = () => {
   todoInput = document.querySelector('.todo-input');
   errorInfo = document.querySelector('.error-info');
@@ -28,6 +19,9 @@ const prepareDOMElements = () => {
   popupCloseBtn = document.querySelector('.cancel');
 };
 
+/**
+ * Dodaje listenery do elementów DOM.
+ */
 const prepareDOMEvents = () => {
   addBtn.addEventListener('click', addNewTask);
   ulList.addEventListener('click', checkClick);
@@ -36,6 +30,9 @@ const prepareDOMEvents = () => {
   todoInput.addEventListener('keyup', enterKeyCheck);
 };
 
+/**
+ * Pobiera listę zadań z serwera.
+ */
 const getTodoList = async () => {
   const res = await fetch('/todolist', {
     method: 'GET',
@@ -47,6 +44,9 @@ const getTodoList = async () => {
   return data;
 };
 
+/**
+ * Pobiera pojedyncze zadanie z serwera na podstawie jego identyfikatora.
+ */
 const getOneTask = async (id) => {
   const res = await fetch(`/todolist/${id}`, {
     method: 'GET',
@@ -58,6 +58,9 @@ const getOneTask = async (id) => {
   return data;
 };
 
+/**
+ * Dodaje nowe zadanie na serwerze.
+ */
 const addTask = async (newTask) => {
   const res = await fetch(`/todolist`, {
     method: 'POST',
@@ -70,12 +73,18 @@ const addTask = async (newTask) => {
   return data;
 };
 
+/**
+ * Usuwa zadanie z serwera na podstawie jego identyfikatora.
+ */
 const deleteTask = async (id) => {
   const res = await fetch(`/todolist/${id}`, {
     method: 'DELETE',
   });
 };
 
+/**
+ * Aktualizuje status wykonania zadania na serwerze.
+ */
 const updateDoneTask = async (id, ToDos) => {
   const res = await fetch(`/todolist/done/${id}`, {
     method: 'PATCH',
@@ -88,6 +97,9 @@ const updateDoneTask = async (id, ToDos) => {
   return data;
 };
 
+/**
+ * Aktualizuje tytuł zadania na serwerze.
+ */
 const updateTask = async (id, updatedTask) => {
   const res = await fetch(`/todolist/${id}`, {
     method: 'PUT',
@@ -99,7 +111,9 @@ const updateTask = async (id, updatedTask) => {
   const data = await res.json();
   return data;
 };
-
+/**
+ * Renderuje listę zadań na stronie.
+ */
 const renderTodoList = async () => {
   const ToDos = await getTodoList();
   const ul = document.querySelector('#ulList');
@@ -135,6 +149,10 @@ const renderTodoList = async () => {
     ul.append(li);
   }
 };
+
+/**
+ * Dodaje nowe zadanie do listy zadań i wysyła je na serwer.
+ */
 const addNewTask = async () => {
   if (todoInput.value !== '') {
     const newTask = {
@@ -150,6 +168,9 @@ const addNewTask = async () => {
   }
 };
 
+/**
+ * Obsługuje kliknięcia na przyciskach "zakończ", "edytuj" i "usuń".
+ */
 const checkClick = async (e) => {
   if (e.target.matches('.complete')) {
     const li = e.target.closest('li');
@@ -167,22 +188,30 @@ const checkClick = async (e) => {
   }
 };
 
+/**
+ * Otwiera okno edycji zadania.
+ */
 const editTodo = (e) => {
   todoToEdit = e.target.closest('li');
   popupInput.value = todoToEdit.firstChild.textContent;
   popup.style.display = 'flex';
 };
 
+/**
+ * Zamyka okno edycji zadania.
+ */
 const closeEdit = () => {
   popup.style.display = 'none';
   popupInfo.textContent = '';
 };
 
+/**
+ * Zmienia tekst zadania w liście zadań i aktualizuje go na serwerze.
+ */
 const changeTodoText = async () => {
   if (popupInput.value !== '') {
     const taskId = todoToEdit.dataset.id;
     const updatedTask = await updateTask(taskId, { title: popupInput.value });
-    console.log(updatedTask);
     todoToEdit.firstChild.textContent = await updatedTask.title;
     popup.style.display = 'none';
     popupInfo.textContent = '';
@@ -191,10 +220,23 @@ const changeTodoText = async () => {
   }
 };
 
+/**
+ * Sprawdza, czy wciskanie klawisza Enter dodaje nowe zadanie.
+ */
 const enterKeyCheck = (e) => {
   if (e.key === 'Enter') {
     addNewTask();
   }
+};
+/**
+
+ Główna funkcja inicjalizująca aplikację, uruchamiająca funkcje
+ przygotowujące elementy DOM i zdarzenia oraz renderująca listę zadań.
+ */
+const main = () => {
+  prepareDOMElements();
+  prepareDOMEvents();
+  renderTodoList();
 };
 
 document.addEventListener('DOMContentLoaded', main);
