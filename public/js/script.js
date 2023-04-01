@@ -22,6 +22,7 @@ const prepareDOMElements = (params) => {
   errorInfo = document.querySelector('.error-info');
   addBtn = document.querySelector('.btn-add');
   ulList = document.querySelector('.todolist ul');
+  console.log(ulList);
 
   popup = document.querySelector('.popup');
   popupInfo = document.querySelector('.popup-info');
@@ -62,7 +63,7 @@ const getTodoList = async () => {
     },
   });
   const data = await res.json();
-  ToDos = data;
+  return data;
 };
 
 const getOneTask = async (id) => {
@@ -106,6 +107,7 @@ const updateDoneTask = async (id, ToDos) => {
 
 const renderTodoList = async () => {
   const ToDos = await getTodoList();
+  console.log(ToDos);
   // Pobieramy ul, bo tam będziemy wrzucać nasze taski: To jak widzę jest robione
   const ul = document.querySelector('#ulList');
   // Warto na początku czyścić ul, by się na froncie nie nadpisywało
@@ -189,6 +191,7 @@ const checkClick = (e) => {
     editTodo(e);
     /* 2) W nawiasie wpisujemy e. W ten sposób przekazujemy do funkcji nasz paremetr e z funkcji clickCheck */
   } else if (e.target.matches('.delete')) {
+    console.log(e);
     deleteTodo(e);
   }
 };
@@ -245,3 +248,9 @@ renderTodoList();
 // addTask(newTask);
 // deleteTask(id);
 // updateDoneTask(id, ToDos);
+
+(async () => {
+  console.log('dzia la');
+  await renderTodoList();
+  console.log('dzia la');
+})();
